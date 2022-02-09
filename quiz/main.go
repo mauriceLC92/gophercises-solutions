@@ -11,9 +11,9 @@ import (
 
 func main() {
 	var fileInput = flag.String("file", "problems.csv", "file name which contains the questions")
-	var timeDuration = flag.Int("time", 30, "time for how long the timer should run")
+	var timeDuration = flag.Int("time", 30, "time for how long the timer should run, in seconds")
 	flag.Parse()
-	fmt.Printf("timeDuration: %v\n", *timeDuration)
+
 	file, err := os.Open(*fileInput)
 	if err != nil {
 		exit(fmt.Sprintf("Failed to open file with name: %s\n", *fileInput))
@@ -31,22 +31,28 @@ func main() {
 	}
 	problems := parseLines(lines)
 
-	go func() {
-		delaySecond(time.Duration(*timeDuration))
-		exit(fmt.Sprint("Time has run out"))
-	}()
+	timer := time.NewTimer(time.Duration(*timeDuration) * time.Second)
 
 	correctAnswerCount := 0
 	for i, problem := range problems {
 		fmt.Printf("Problem # %d: %v = ?\n", i+1, problem.question)
-		var userAnswer string
-		fmt.Scanln(&userAnswer)
-		if userAnswer == problem.answer {
-			correctAnswerCount++
+		answerCh := make(chan string)
+		go func() {
+			var userAnswer string
+			fmt.Scanln(&userAnswer)
+			answerCh <- userAnswer
+		}()
+		select {
+		case <-timer.C:
+			fmt.Printf("You got %v out of %v correct \n", correctAnswerCount, len(problems))
+			return
+		case userAnswer := <-answerCh:
+			if userAnswer == problem.answer {
+				correctAnswerCount++
+			}
 		}
 	}
 
-	fmt.Printf("You got %v out of %v correct \n", correctAnswerCount, len(problems))
 }
 
 func parseLines(lines [][]string) []problem {
