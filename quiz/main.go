@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
-	var flagVal = flag.String("file", "problems.csv", "file name which contains the questions")
+	var fileInput = flag.String("file", "problems.csv", "file name which contains the questions")
+	var timeDuration = flag.Int("time", 30, "time for how long the timer should run")
 	flag.Parse()
-
-	file, err := os.Open(*flagVal)
+	fmt.Printf("timeDuration: %v\n", *timeDuration)
+	file, err := os.Open(*fileInput)
 	if err != nil {
-		exit(fmt.Sprintf("Failed to open file with name: %s\n", *flagVal))
+		exit(fmt.Sprintf("Failed to open file with name: %s\n", *fileInput))
 		os.Exit(1)
 	}
 
@@ -28,6 +30,11 @@ func main() {
 		exit(fmt.Sprint("Failed parsing the provided CSV file"))
 	}
 	problems := parseLines(lines)
+
+	go func() {
+		delaySecond(time.Duration(*timeDuration))
+		exit(fmt.Sprint("Time has run out"))
+	}()
 
 	correctAnswerCount := 0
 	for i, problem := range problems {
@@ -61,4 +68,8 @@ type problem struct {
 func exit(msg string) {
 	fmt.Println(msg)
 	os.Exit(1)
+}
+
+func delaySecond(n time.Duration) {
+	time.Sleep(n * time.Second)
 }
